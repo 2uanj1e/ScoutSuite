@@ -1,5 +1,7 @@
 import json
 import logging
+
+import msal
 import requests
 from getpass import getpass
 from datetime import datetime, timedelta
@@ -9,6 +11,7 @@ from msrestazure.azure_active_directory import MSIAuthentication
 from ScoutSuite.core.console import print_info, print_debug, print_exception
 from msrestazure.azure_active_directory import AADTokenCredentials
 import adal
+import msal
 
 from ScoutSuite.providers.base.authentication_strategy import AuthenticationStrategy, AuthenticationException
 
@@ -22,13 +25,13 @@ class AzureCredentials:
     def __init__(self,
                  arm_credentials, aad_graph_credentials,
                  tenant_id=None, default_subscription_id=None,
-                 context=None):
+                 app=None):
 
         self.arm_credentials = arm_credentials  # Azure Resource Manager API credentials
         self.aad_graph_credentials = aad_graph_credentials  # Azure AD Graph API credentials
         self.tenant_id = tenant_id
         self.default_subscription_id = default_subscription_id
-        self.context = context
+        self.app = app
 
     def get_tenant_id(self):
         if self.tenant_id:
@@ -57,6 +60,33 @@ class AzureCredentials:
             raise AuthenticationException('Invalid credentials resource type')
 
     def get_fresh_credentials(self, credentials):
+        if self.app and hasattr(credentials, 'token'):
+            accounts = self.app.get_accounts()
+            if accounts:
+                scopes = [credentials.resource + '.default']
+                new_token = self.app.acquire_token_silent(scopes, account=accounts[0])
+                print('Token refreshed.')
+                return eval(type(credentials).__name__)(new_token, AZURE_CLI_CLIENT_ID)
+            else:
+                print('No suitable token exists in cache. Let\'s get a new one.')
+                resourceId = 'https://management.core.windows.net/'
+                scopes = [resourceId + '.default']
+                flow = self.app.initiate_device_flow(scopes=scopes)
+                if 'user_code' not in flow:
+                    raise Exception("Failed to initiate device flow!")
+                else:
+                    print(flow['message'])
+                    result = self.app.acquire_token_by_device_flow(flow)
+                    if "access_token" in result:
+                        credentials = eval(type(credentials).__name__)(result, AZURE_CLI_CLIENT_ID)
+                    else:
+                        print(result.get("error"))
+                        print(result.get("error_description"))
+                        print(result.get("correlation_id"))
+        return credentials
+
+    '''
+    def get_fresh_credentials(self, credentials):
         """
         Check if credentials are outdated and if so refresh them.
         """
@@ -65,7 +95,7 @@ class AzureCredentials:
             current_datetime = datetime.now()
             expiration_delta = expiration_datetime - current_datetime
             if expiration_delta < timedelta(minutes=5):
-                return self.refresh_credential(credentials)
+                return self.refresh_credential(credentials['client_id'])
         return credentials
 
     def refresh_credential(self, credentials):
@@ -82,7 +112,7 @@ class AzureCredentials:
 
         new_credentials = AADTokenCredentials(new_token, credentials.token.get('_client_id'))
         return new_credentials
-
+    '''
 
 class AzureAuthenticationStrategy(AuthenticationStrategy):
 
@@ -107,7 +137,7 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
             logging.getLogger('urllib3').setLevel(logging.ERROR)
             logging.getLogger('cli.azure.cli.core').setLevel(logging.ERROR)
 
-            context = None
+            # context = None
 
             if cli:
                 arm_credentials, subscription_id, tenant_id = \
@@ -129,11 +159,15 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                                                             resource='https://graph.windows.net')
 
             elif user_account_browser:
-
+                '''
                 authority_uri = AUTHORITY_HOST_URI + '/' + tenant_id
                 context = adal.AuthenticationContext(authority_uri, api_version=None)
+                '''
 
-                # Resource Manager
+                authority = AUTHORITY_HOST_URI + '/' + tenant_id
+                app = msal.PublicClientApplication(client_id=AZURE_CLI_CLIENT_ID, authority=authority)
+
+                '''
                 resource_uri = 'https://management.core.windows.net/'
                 code = context.acquire_user_code(resource_uri, AZURE_CLI_CLIENT_ID)
                 print_info('To authenticate to the Resource Manager API, use a web browser to '
@@ -141,8 +175,41 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                                                                      code['user_code']))
                 arm_token = context.acquire_token_with_device_code(resource_uri, code, AZURE_CLI_CLIENT_ID)
                 arm_credentials = AADTokenCredentials(arm_token, AZURE_CLI_CLIENT_ID)
+                '''
+
+                # Resource Manager
+                resourceId = 'https://management.core.windows.net/'
+                scopes = [resourceId + '.default']
+                flow = app.initiate_device_flow(scopes=scopes)
+                if 'user_code' not in flow:
+                    raise Exception("Failed to initiate device flow!")
+                else:
+                    print(flow['message'])
+                    result = app.acquire_token_by_device_flow(flow)
+                    if "access_token" in result:
+                        arm_credentials = AADTokenCredentials(result, AZURE_CLI_CLIENT_ID)
+                    else:
+                        print(result.get("error"))
+                        print(result.get("error_description"))
+                        print(result.get("correlation_id"))
 
                 # AAD Graph
+                resourceId = 'https://graph.windows.net/'
+                scopes = [resourceId + '.default']
+                flow = app.initiate_device_flow(scopes=scopes)
+                if 'user_code' not in flow:
+                    raise Exception("Failed to initiate device flow!")
+                else:
+                    print(flow['message'])
+                    result = app.acquire_token_by_device_flow(flow)
+                    if "access_token" in result:
+                        aad_graph_credentials = AADTokenCredentials(result, AZURE_CLI_CLIENT_ID)
+                    else:
+                        print(result.get("error"))
+                        print(result.get("error_description"))
+                        print(result.get("correlation_id"))
+
+                '''
                 resource_uri = 'https://graph.windows.net'
                 code = context.acquire_user_code(resource_uri, AZURE_CLI_CLIENT_ID)
                 print_info('To authenticate to the Azure AD Graph API, use a web browser to '
@@ -150,6 +217,7 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                                                                      code['user_code']))
                 aad_graph_token = context.acquire_token_with_device_code(resource_uri, code, AZURE_CLI_CLIENT_ID)
                 aad_graph_credentials = AADTokenCredentials(aad_graph_token, AZURE_CLI_CLIENT_ID)
+                '''
 
             elif service_principal:
 
@@ -215,7 +283,7 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
             return AzureCredentials(arm_credentials,
                                     aad_graph_credentials,
                                     tenant_id, subscription_id,
-                                    context)
+                                    app)
 
         except Exception as e:
             if ', AdalError: Unsupported wstrust endpoint version. ' \

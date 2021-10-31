@@ -4,6 +4,8 @@ from ScoutSuite.core.console import print_exception, print_debug
 from ScoutSuite.providers.utils import run_concurrently
 from ScoutSuite.utils import get_user_agent
 
+import datetime
+
 
 class SecurityCenterFacade:
 
@@ -82,7 +84,7 @@ class SecurityCenterFacade:
     async def get_compliance_results(self, subscription_id: str):
         try:
             client = self.get_client(subscription_id)
-            scope = f'/subscriptions/{subscription_id}'
+            scope = f'/subscriptions/{subscription_id}?years={datetime.datetime.now().year}'
             return await run_concurrently(
                 lambda: list(client.compliance_results.list(scope=scope))
             )
