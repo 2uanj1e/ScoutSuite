@@ -4,8 +4,6 @@ from ScoutSuite.providers.aws.resources.awslambda.base import Lambdas
 from ScoutSuite.providers.aws.resources.cloudformation.base import CloudFormation
 from ScoutSuite.providers.aws.resources.cloudtrail.base import CloudTrail
 from ScoutSuite.providers.aws.resources.cloudwatch.base import CloudWatch
-from ScoutSuite.providers.aws.resources.cloudfront.base import CloudFront
-from ScoutSuite.providers.aws.resources.codebuild.base import CodeBuild
 from ScoutSuite.providers.aws.resources.config.base import Config
 from ScoutSuite.providers.aws.resources.directconnect.base import DirectConnect
 from ScoutSuite.providers.aws.resources.dynamodb.base import DynamoDB
@@ -53,10 +51,6 @@ try:
     from ScoutSuite.providers.aws.resources.private_guardduty.base import GuardDuty
 except ImportError:
     pass
-try:
-    from ScoutSuite.providers.aws.resources.private_ssm.base import SSM
-except ImportError:
-    pass
 
 
 class AWSServicesConfig(BaseServicesConfig):
@@ -65,7 +59,6 @@ class AWSServicesConfig(BaseServicesConfig):
 
     :ivar cloudtrail:                   CloudTrail configuration
     :ivar cloudwatch:                   CloudWatch configuration:
-    :ivar cloudfront:                   CloudFront configuration
     :ivar config:                       Config configuration
     :ivar dynamodb:                     DynamoDB configuration
     :ivar ec2:                          EC2 configuration
@@ -94,8 +87,6 @@ class AWSServicesConfig(BaseServicesConfig):
         self.cloudformation = CloudFormation(facade)
         self.cloudtrail = CloudTrail(facade)
         self.cloudwatch = CloudWatch(facade)
-        self.cloudfront = CloudFront(facade)
-        self.codebuild = CodeBuild(facade)
         self.config = Config(facade)
         self.directconnect = DirectConnect(facade)
         self.dynamodb = DynamoDB(facade)
@@ -140,10 +131,6 @@ class AWSServicesConfig(BaseServicesConfig):
             pass
         try:
             self.guardduty = GuardDuty(facade)
-        except NameError as _:
-            pass
-        try:
-            self.ssm = SSM(facade)
         except NameError as _:
             pass
 

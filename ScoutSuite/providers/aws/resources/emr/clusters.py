@@ -16,5 +16,4 @@ class EMRClusters(AWSResources):
     def _parse_cluster(self, raw_cluster):
         raw_cluster['id'] = raw_cluster.pop('Id')
         raw_cluster['name'] = raw_cluster.pop('Name')
-        raw_cluster['arn'] = raw_cluster.pop('ClusterArn')
         return raw_cluster['id'], raw_cluster

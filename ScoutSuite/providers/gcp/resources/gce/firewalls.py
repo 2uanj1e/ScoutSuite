@@ -29,8 +29,6 @@ class Firewalls(Resources):
         firewall_dict['target_tags'] = raw_firewall.get('targetTags', [])
         firewall_dict['direction'] = raw_firewall['direction']
         firewall_dict['disabled'] = raw_firewall['disabled']
-        firewall_dict['logs'] = raw_firewall['logConfig'].get('enable', False)
-
         self._parse_firewall_rules(firewall_dict, raw_firewall)
         return firewall_dict['id'], firewall_dict
 
@@ -39,32 +37,25 @@ class Firewalls(Resources):
             direction_string = '%s_traffic' % direction
             firewall_dict[direction_string] = {
                 'tcp': [],
-                'udp': []
+                'udp': [],
+                'icmp': []
             }
             if direction in raw_firewall:
                 firewall_dict['action'] = direction
                 for rule in raw_firewall[direction]:
-                    # everything
-                    if rule['IPProtocol'] == 'all':
-                        firewall_dict[direction_string]["tcp"] = ['0-65535']
-                        firewall_dict[direction_string]["udp"] = ['0-65535']
-                        firewall_dict[direction_string]["icmp"] = ['Portless Protocol']
-                    # protocols that do not support ports
-                    elif rule['IPProtocol'] not in firewall_dict[direction_string]:
-                        # only including ICMP
-                        if rule['IPProtocol'] == 'icmp':
-                            firewall_dict[direction_string]["icmp"] = ['Portless Protocol']
-                        else:
-                            pass
-                    # protocols that support ports
+                    if rule['IPProtocol'] not in firewall_dict[direction_string]:
+                        firewall_dict[direction_string][rule['IPProtocol']] = ['*']
                     else:
-                        if firewall_dict[direction_string][rule['IPProtocol']] != ['0-65535']:
-                            if 'ports' in rule:
-                                firewall_dict[direction_string][rule['IPProtocol']] += rule['ports']
-                            else:
-                                firewall_dict[direction_string][rule['IPProtocol']] = ['0-65535']
-                # remove empty values
-                firewall_dict[direction_string] = {k: v for k, v in firewall_dict[direction_string].items() if v}
+                        if rule['IPProtocol'] == 'all':
+                            for protocol in firewall_dict[direction_string]:
+                                firewall_dict[direction_string][protocol] = ['0-65535']
+                            break
+                        else:
+                            if firewall_dict[direction_string][rule['IPProtocol']] != ['0-65535']:
+                                if 'ports' in rule:
+                                    firewall_dict[direction_string][rule['IPProtocol']] += rule['ports']
+                                else:
+                                    firewall_dict[direction_string][rule['IPProtocol']] = ['0-65535']
 
     def _get_description(self, raw_firewall):
         description = raw_firewall.get('description')

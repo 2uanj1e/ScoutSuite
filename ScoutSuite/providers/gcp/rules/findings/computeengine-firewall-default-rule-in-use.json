@@ -12,11 +12,7 @@
                 "default-allow-internal",
                 "default-allow-icmp",
                 "default-allow-rdp",
-                "default-allow-ssh",
-                "auto-mode-vpc-allow-icmp",
-                "auto-mode-vpc-allow-internal",
-                "auto-mode-vpc-allow-rdp",
-                "auto-mode-vpc-allow-ssh"
+                "default-allow-ssh"
             ]
         ],
         [

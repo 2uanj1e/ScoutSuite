@@ -5,7 +5,6 @@ from ScoutSuite.providers.aws.facade.basefacade import AWSBaseFacade
 from ScoutSuite.providers.aws.facade.utils import AWSFacadeUtils
 
 
-
 class LambdaFacade(AWSBaseFacade):
     async def get_functions(self, region):
         try:
@@ -41,10 +40,7 @@ class LambdaFacade(AWSBaseFacade):
             role['policies'] = managed_policies
             return role
         except Exception as e:
-            # Fix:#1320 If an lambda execution role associated with is deleted a
-            # NoSuchEntityException is triggered. We can ignore it.
-            if "NoSuchEntityException" not in str(e.__class__):
-                print_exception('Failed to get role from managed policies: {}'.format(e))
+            print_exception('Failed to get role from managed policies: {}'.format(e))
             return None
 
     async def get_env_variables(self, function_name, region):
