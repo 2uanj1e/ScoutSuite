@@ -62,57 +62,38 @@ class AzureCredentials:
     def get_fresh_credentials(self, credentials):
         if self.app and hasattr(credentials, 'token'):
             accounts = self.app.get_accounts()
+            resourceId = 'https://management.core.windows.net/' if type(
+                credentials).__name__ == 'AADTokenCredentials' else 'https://graph.windows.net/'
+            scopes = [resourceId + '.default']
             if accounts:
-                scopes = [credentials.resource + '.default']
-                new_token = self.app.acquire_token_silent(scopes, account=accounts[0])
-                print('Token refreshed.')
-                return eval(type(credentials).__name__)(new_token, AZURE_CLI_CLIENT_ID)
+                # new_token = self.app.acquire_token_silent(scopes, account=accounts[0])
+                expiration_datetime = datetime.fromtimestamp(credentials.token['id_token_claims']['exp'])
+                current_datetime = datetime.now()
+                expiration_delta = expiration_datetime - current_datetime
+                if expiration_delta < timedelta(minutes=5):
+                    print_info('Token refreshed.')
+                    return self.refresh_credential(credentials)
+        return credentials
+
+    def refresh_credential(self, credential):
+        print_info('No suitable token exists in cache. Let\'s get a new one.')
+        resourceId = 'https://management.core.windows.net/' if type(
+            credential).__name__ == 'AADTokenCredentials' else 'https://graph.windows.net/'
+        scopes = [resourceId + '.default']
+        flow = self.app.initiate_device_flow(scopes=scopes)
+        if 'user_code' not in flow:
+            raise Exception("Failed to initiate device flow!")
+        else:
+            print_info(flow['message'])
+            result = self.app.acquire_token_by_device_flow(flow)
+            if "access_token" in result:
+                credential = eval(type(credential).__name__)(result, AZURE_CLI_CLIENT_ID)
             else:
-                print('No suitable token exists in cache. Let\'s get a new one.')
-                resourceId = 'https://management.core.windows.net/'
-                scopes = [resourceId + '.default']
-                flow = self.app.initiate_device_flow(scopes=scopes)
-                if 'user_code' not in flow:
-                    raise Exception("Failed to initiate device flow!")
-                else:
-                    print(flow['message'])
-                    result = self.app.acquire_token_by_device_flow(flow)
-                    if "access_token" in result:
-                        credentials = eval(type(credentials).__name__)(result, AZURE_CLI_CLIENT_ID)
-                    else:
-                        print(result.get("error"))
-                        print(result.get("error_description"))
-                        print(result.get("correlation_id"))
-        return credentials
+                print_exception(result.get("error"))
+                print_exception(result.get("error_description"))
+                print_exception(result.get("correlation_id"))
+        return credential
 
-    '''
-    def get_fresh_credentials(self, credentials):
-        """
-        Check if credentials are outdated and if so refresh them.
-        """
-        if self.context and hasattr(credentials, 'token'):
-            expiration_datetime = datetime.fromtimestamp(credentials.token['expires_on'])
-            current_datetime = datetime.now()
-            expiration_delta = expiration_datetime - current_datetime
-            if expiration_delta < timedelta(minutes=5):
-                return self.refresh_credential(credentials['client_id'])
-        return credentials
-
-    def refresh_credential(self, credentials):
-        """
-        Refresh credentials
-        """
-        print_debug('Refreshing credentials')
-        authority_uri = AUTHORITY_HOST_URI + '/' + self.get_tenant_id()
-        existing_cache = self.context.cache
-        context = adal.AuthenticationContext(authority_uri, cache=existing_cache)
-        new_token = context.acquire_token(credentials.token['resource'],
-                                          credentials.token['user_id'],
-                                          credentials.token['_client_id'])
-
-        new_credentials = AADTokenCredentials(new_token, credentials.token.get('_client_id'))
-        return new_credentials
-    '''
 
 class AzureAuthenticationStrategy(AuthenticationStrategy):
 
@@ -167,16 +148,6 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                 authority = AUTHORITY_HOST_URI + '/' + tenant_id
                 app = msal.PublicClientApplication(client_id=AZURE_CLI_CLIENT_ID, authority=authority)
 
-                '''
-                resource_uri = 'https://management.core.windows.net/'
-                code = context.acquire_user_code(resource_uri, AZURE_CLI_CLIENT_ID)
-                print_info('To authenticate to the Resource Manager API, use a web browser to '
-                           'access {} and enter the {} code.'.format(code['verification_url'],
-                                                                     code['user_code']))
-                arm_token = context.acquire_token_with_device_code(resource_uri, code, AZURE_CLI_CLIENT_ID)
-                arm_credentials = AADTokenCredentials(arm_token, AZURE_CLI_CLIENT_ID)
-                '''
-
                 # Resource Manager
                 resourceId = 'https://management.core.windows.net/'
                 scopes = [resourceId + '.default']
@@ -184,14 +155,14 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                 if 'user_code' not in flow:
                     raise Exception("Failed to initiate device flow!")
                 else:
-                    print(flow['message'])
+                    print_info(flow['message'])
                     result = app.acquire_token_by_device_flow(flow)
                     if "access_token" in result:
                         arm_credentials = AADTokenCredentials(result, AZURE_CLI_CLIENT_ID)
                     else:
-                        print(result.get("error"))
-                        print(result.get("error_description"))
-                        print(result.get("correlation_id"))
+                        print_exception(result.get("error"))
+                        print_exception(result.get("error_description"))
+                        print_exception(result.get("correlation_id"))
 
                 # AAD Graph
                 resourceId = 'https://graph.windows.net/'
@@ -200,24 +171,14 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                 if 'user_code' not in flow:
                     raise Exception("Failed to initiate device flow!")
                 else:
-                    print(flow['message'])
+                    print_info(flow['message'])
                     result = app.acquire_token_by_device_flow(flow)
                     if "access_token" in result:
                         aad_graph_credentials = AADTokenCredentials(result, AZURE_CLI_CLIENT_ID)
                     else:
-                        print(result.get("error"))
-                        print(result.get("error_description"))
-                        print(result.get("correlation_id"))
-
-                '''
-                resource_uri = 'https://graph.windows.net'
-                code = context.acquire_user_code(resource_uri, AZURE_CLI_CLIENT_ID)
-                print_info('To authenticate to the Azure AD Graph API, use a web browser to '
-                           'access {} and enter the {} code.'.format(code['verification_url'],
-                                                                     code['user_code']))
-                aad_graph_token = context.acquire_token_with_device_code(resource_uri, code, AZURE_CLI_CLIENT_ID)
-                aad_graph_credentials = AADTokenCredentials(aad_graph_token, AZURE_CLI_CLIENT_ID)
-                '''
+                        print_exception(result.get("error"))
+                        print_exception(result.get("error_description"))
+                        print_exception(result.get("correlation_id"))
 
             elif service_principal:
 
