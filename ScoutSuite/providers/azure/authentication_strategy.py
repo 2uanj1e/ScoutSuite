@@ -10,7 +10,6 @@ from azure.common.credentials import ServicePrincipalCredentials, UserPassCreden
 from msrestazure.azure_active_directory import MSIAuthentication
 from ScoutSuite.core.console import print_info, print_debug, print_exception
 from msrestazure.azure_active_directory import AADTokenCredentials
-import adal
 import msal
 
 from ScoutSuite.providers.base.authentication_strategy import AuthenticationStrategy, AuthenticationException
@@ -23,12 +22,13 @@ AZURE_CLI_CLIENT_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
 class AzureCredentials:
 
     def __init__(self,
-                 arm_credentials, aad_graph_credentials,
+                 arm_credentials, aad_graph_credentials,ms_graph_token,
                  tenant_id=None, default_subscription_id=None,
                  app=None):
 
         self.arm_credentials = arm_credentials  # Azure Resource Manager API credentials
         self.aad_graph_credentials = aad_graph_credentials  # Azure AD Graph API credentials
+        self.ms_graph_token = ms_graph_token # Microsoft Graph API token
         self.tenant_id = tenant_id
         self.default_subscription_id = default_subscription_id
         self.app = app
@@ -58,6 +58,43 @@ class AzureCredentials:
             return self.aad_graph_credentials
         else:
             raise AuthenticationException('Invalid credentials resource type')
+
+    def get_token(self, resource):
+        if resource == 'ms_graph':
+            self.ms_graph_token = self.get_fresh_token(self.ms_graph_token)
+            return self.ms_graph_token
+        else:
+            raise AuthenticationException('Invalid token resource type')
+    
+    def get_fresh_token(self, token):
+        if self.app and hasattr(token, 'access_token'):
+            accounts = self.app.get_accounts()
+            if accounts:
+                expiration_datetime = datetime.fromtimestamp(token['id_token_claims']['exp'])
+                current_datetime = datetime.now()
+                expiration_delta = expiration_datetime - current_datetime
+                if expiration_delta < timedelta(minutes=5):
+                    print_info('Token refreshed.')
+                    return self.refresh_token(token)
+        return token
+
+    def refresh_token(self, token):
+        print_info('No suitable token exists in cache. Let\'s get a new one.')
+        resourceId = 'https://graph.microsoft.com/' if 'https://graph.microsoft.com/' in token['scope'] else None
+        scopes = [resourceId + '.default']
+        flow = self.app.initiate_device_flow(scopes=scopes)
+        if 'user_code' not in flow:
+            raise Exception("Failed to initiate device flow!")
+        else:
+            print_info(flow['message'])
+            result = self.app.acquire_token_by_device_flow(flow)
+            if "access_token" in result:
+                token = result
+            else:
+                print_exception(result.get("error"))
+                print_exception(result.get("error_description"))
+                print_exception(result.get("correlation_id"))
+        return token
 
     def get_fresh_credentials(self, credentials):
         if self.app and hasattr(credentials, 'token'):
@@ -180,6 +217,22 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                         print_exception(result.get("error_description"))
                         print_exception(result.get("correlation_id"))
 
+                ## MS Graph
+                resourceId = 'https://graph.microsoft.com/'
+                scopes = [resourceId + '.default']
+                flow = app.initiate_device_flow(scopes=scopes)
+                if 'user_code' not in flow:
+                    raise Exception("Failed to initiate device flow!")
+                else:
+                    print_info(flow['message'])
+                    result = app.acquire_token_by_device_flow(flow)
+                    if "access_token" in result:
+                        ms_graph_token = result
+                    else:
+                        print_exception(result.get("error"))
+                        print_exception(result.get("error_description"))
+                        print_exception(result.get("correlation_id"))
+
             elif service_principal:
 
                 if not tenant_id:
@@ -243,6 +296,7 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
 
             return AzureCredentials(arm_credentials,
                                     aad_graph_credentials,
+                                    ms_graph_token,
                                     tenant_id, subscription_id,
                                     app)
 
