@@ -45,6 +45,7 @@ formatted_service_name = {
     'appservice': 'App Services',
     'loadbalancer': 'Load Balancer',
     'virtualmachines': 'Virtual Machines',
+    'ms': 'Microsoft Graph',
     # GCP
     'cloudstorage': 'Cloud Storage',
     'cloudsql': 'Cloud SQL',

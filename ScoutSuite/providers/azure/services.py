@@ -3,6 +3,7 @@ from ScoutSuite.providers.azure.facade.base import AzureFacade
 from ScoutSuite.providers.azure.resources.aad.base import AAD
 from ScoutSuite.providers.azure.resources.rbac.base import RBAC
 from ScoutSuite.providers.azure.resources.keyvault.base import KeyVaults
+from ScoutSuite.providers.azure.resources.ms.base import MS
 from ScoutSuite.providers.azure.resources.network.base import Networks
 from ScoutSuite.providers.azure.resources.securitycenter.base import SecurityCenter
 from ScoutSuite.providers.azure.resources.sqldatabase.base import Servers
@@ -49,6 +50,7 @@ class AzureServicesConfig(BaseServicesConfig):
         self.network = Networks(facade)
         self.virtualmachines = VirtualMachines(facade)
         self.appservice = AppServices(facade)
+        self.ms = MS(facade)
 
         # Instantiate proprietary services
         try:
