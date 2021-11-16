@@ -21,8 +21,9 @@ class AADFacade:
             # This filters down the users which are pulled from the directory, otherwise for large tenants this
             # gets out of hands.
             # See https://github.com/nccgroup/ScoutSuite/issues/698
-            user_filter = " and ".join([
-                'userType eq \'Guest\''
+            user_filter = " or ".join([
+                'userType eq \'Guest\'',
+                'userType eq \'Member\'',
             ])
             return await run_concurrently(lambda: list(self.get_client().users.list(filter=user_filter)))
         except Exception as e:

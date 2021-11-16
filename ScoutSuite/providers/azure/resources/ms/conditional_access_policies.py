@@ -1,6 +1,5 @@
 from ScoutSuite.providers.azure.facade.base import AzureFacade
 from ScoutSuite.providers.azure.resources.base import AzureResources
-from ScoutSuite.providers.utils import get_non_provider_id
 
 
 class ConditionalAccessPolicies(AzureResources):
@@ -11,7 +10,7 @@ class ConditionalAccessPolicies(AzureResources):
 
     def _parse_conditional_access_policies(self, raw_conditional_access_policy):
         conditional_access_policy = {}
-        conditional_access_policy['id'] = get_non_provider_id(raw_conditional_access_policy['id'])
+        conditional_access_policy['id'] = raw_conditional_access_policy['id']
         conditional_access_policy['displayName'] = raw_conditional_access_policy['displayName']
         conditional_access_policy['createdDateTime'] = raw_conditional_access_policy['createdDateTime']
         conditional_access_policy['modifiedDateTime'] = raw_conditional_access_policy['modifiedDateTime']
