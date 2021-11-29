@@ -4,7 +4,7 @@ from ScoutSuite.providers.azure.resources.base import AzureResources
 
 class ConditionalAccessPolicies(AzureResources):
     async def fetch_all(self):
-        for raw_conditional_access_policy in self.facade.ms.get_conditional_access_policies()['value']:
+        for raw_conditional_access_policy in await self.facade.ms.get_conditional_access_policies():
             id, conditional_access_policy = self._parse_conditional_access_policies(raw_conditional_access_policy)
             self[id] = conditional_access_policy
 

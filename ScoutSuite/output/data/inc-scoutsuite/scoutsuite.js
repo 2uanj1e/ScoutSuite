@@ -1282,6 +1282,8 @@ function makeTitle(title) {
         return 'OSS'
     } else if (title === 'objectstorage') {
         return 'Object Storage'
+    } else if (title === 'ms') {
+        return 'Microsoft Graph'
     } else {
         return (title.charAt(0).toUpperCase() + title.substr(1).toLowerCase()).split('_').join(' ')
     }

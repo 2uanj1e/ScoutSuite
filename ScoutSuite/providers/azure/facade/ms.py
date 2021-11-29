@@ -1,5 +1,6 @@
 import requests
 from ScoutSuite.utils import get_user_agent
+from ScoutSuite.providers.utils import run_concurrently
 from ScoutSuite.core.console import print_exception
 
 
@@ -16,12 +17,13 @@ class MSFacade:
             'Accept': 'application/json',}
         return header
 
-    def get_conditional_access_policies(self):
+    async def get_conditional_access_policies(self):
         headers = self.get_header()
         url = 'https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies'
         try:
-            response = requests.get(url, headers=headers)
-            return response.json()
+            # response = await requests.get(url, headers=headers)
+            response = await run_concurrently(lambda: requests.get(url, headers=headers))
+            return response.json()['value']
         except requests.exceptions.RequestException as e:
             print_exception(f'Failed to get conditional access policies: {e}')
             return None

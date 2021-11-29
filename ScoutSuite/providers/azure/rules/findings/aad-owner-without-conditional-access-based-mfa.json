@@ -1,0 +1,27 @@
+{
+  "description": "Owner accounts without conditional access based MFA protection",
+  "rationale": "Multi-Factor Authentication (MFA) should be enabled for all subscription accounts with owner permissions to prevent a breach of accounts or resources.",
+  "remediation": "<a href=\"https://docs.microsoft.com/en-us/azure/active-directory/authentication/howto-mfa-userstates#convert-users-from-per-user-mfa-to-conditional-access-based-mfa\">Execute the remediation script.</a>",
+  "compliance": [
+      {
+          "name": "CIS Microsoft Azure Foundations",
+          "version": "1.1.0",
+          "reference": "1.1"
+      }
+  ],
+  "dashboard_name": "Users",
+  "path": "aad.users.id",
+  "conditions": [
+      "and",
+      [
+          "aad.users.id.includedByUsers",
+          "empty",
+          ""
+      ],
+      [
+          "aad.users.id.includedByGroups",
+          "empty",
+          ""
+      ]
+  ]
+}
