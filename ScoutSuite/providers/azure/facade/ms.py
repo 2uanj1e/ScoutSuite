@@ -27,3 +27,13 @@ class MSFacade:
         except requests.exceptions.RequestException as e:
             print_exception(f'Failed to get conditional access policies: {e}')
             return None
+
+    async def get_credential_user_registration_details(self):
+        headers = self.get_header()
+        url = 'https://graph.microsoft.com/beta/reports/credentialUserRegistrationDetails'
+        try:
+            response = await run_concurrently(lambda: requests.get(url, headers=headers))
+            return response.json()['value']
+        except requests.exceptions.RequestException as e:
+            print_exception(f'Failed to get credential user registration details: {e}')
+            return None
