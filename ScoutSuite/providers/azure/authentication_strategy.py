@@ -16,9 +16,7 @@ from ScoutSuite.providers.base.authentication_strategy import AuthenticationStra
 
 
 AUTHORITY_HOST_URI = 'https://login.microsoftonline.com'
-# AUTHORITY_HOST_URI = 'https://login.microsoftonline.com/1498b82c-b2d9-4aa5-9ebe-98112b39123f/oauth2/token'
 AZURE_CLI_CLIENT_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
-# CUSTOM_CLI_CLIENT_ID = '3e25baed-f4f8-4c4c-8f5f-12d18e9f985c'
 
 
 class AzureCredentials:
@@ -27,7 +25,10 @@ class AzureCredentials:
                  arm_credentials, aad_graph_credentials,ms_graph_token,
                  tenant_id=None, default_subscription_id=None,
                  app=None,
-                 owned_app=None):
+                 owned_app=None,
+                 user_account=False,
+                 username=None,
+                 password=None):
 
         self.arm_credentials = arm_credentials  # Azure Resource Manager API credentials
         self.aad_graph_credentials = aad_graph_credentials  # Azure AD Graph API credentials
@@ -36,6 +37,9 @@ class AzureCredentials:
         self.default_subscription_id = default_subscription_id
         self.app = app
         self.owned_app = owned_app
+        self.user_account = user_account
+        self.username = username
+        self.password = password
 
     def get_tenant_id(self):
         if self.tenant_id:
@@ -64,11 +68,31 @@ class AzureCredentials:
             raise AuthenticationException('Invalid credentials resource type')
 
     def get_token(self, resource):
-        if resource == 'ms_graph':
-            self.ms_graph_token = self.get_fresh_token(self.ms_graph_token)
-            return self.ms_graph_token
+        if self.user_account:
+            resourceId = 'https://graph.microsoft.com/'
+            scopes = [resourceId + 'Reports.Read.All', resourceId + 'Policy.Read.All']
+            ms_graph_token = None
+            accounts = self.owned_app.get_accounts(username=self.username)
+            if accounts:
+                print_info('Account(s) exists in cache, probably with token too. Let\'s try.')
+                self.ms_graph_token = self.owned_app.acquire_token_silent(scopes=scopes, account=accounts[0])
+                return self.ms_graph_token
+            if not ms_graph_token:
+                print_info('No suitable token exists in cache. Let\'s get a new one.')
+                try:
+                    self.ms_graph_token = self.owned_app.acquire_token_by_username_password(username=self.username, password=self.password,
+                                                                              scopes=scopes)
+                    return self.ms_graph_token
+                except Exception as e:
+                    print_exception('Unable to get token: {}'.format(e))
+                    return None
+
         else:
-            raise AuthenticationException('Invalid token resource type')
+            if resource == 'ms_graph':
+                self.ms_graph_token = self.get_fresh_token(self.ms_graph_token)
+                return self.ms_graph_token
+            else:
+                raise AuthenticationException('Invalid token resource type')
     
     def get_fresh_token(self, token):
         if self.owned_app and hasattr(token, 'access_token'):
@@ -162,6 +186,9 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
 
             # context = None
 
+            app = None
+            owned_app = None
+
             if cli:
                 arm_credentials, subscription_id, tenant_id = \
                     get_azure_cli_credentials(with_tenant=True)
@@ -169,7 +196,6 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                     get_azure_cli_credentials(with_tenant=True, resource='https://graph.windows.net')
 
             elif user_account:
-
                 if not (username and password):
                     if not programmatic_execution:
                         username = username if username else input("Username: ")
@@ -181,12 +207,13 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                 aad_graph_credentials = UserPassCredentials(username, password,
                                                             resource='https://graph.windows.net')
 
-            elif user_account_browser:
-                '''
-                authority_uri = AUTHORITY_HOST_URI + '/' + tenant_id
-                context = adal.AuthenticationContext(authority_uri, api_version=None)
-                '''
+                authority = AUTHORITY_HOST_URI + '/organizations'
+                owned_app = msal.PublicClientApplication(client_id=app_client_id, authority=authority)
+                resourceId = 'https://graph.microsoft.com/'
+                scopes = [resourceId + 'Reports.Read.All', resourceId + 'Policy.Read.All']
+                ms_graph_token = owned_app.acquire_token_by_username_password(username=username, password=password, scopes=scopes)
 
+            elif user_account_browser:
                 authority = AUTHORITY_HOST_URI + '/' + tenant_id
                 app = msal.PublicClientApplication(client_id=AZURE_CLI_CLIENT_ID, authority=authority)
                 owned_app = msal.PublicClientApplication(client_id=app_client_id, authority=authority)
@@ -304,8 +331,11 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                                     aad_graph_credentials,
                                     ms_graph_token,
                                     tenant_id, subscription_id,
-                                    app,
-                                    owned_app)
+                                    app=app if app else None,
+                                    owned_app=owned_app if owned_app else None,
+                                    user_account=user_account if user_account else None,
+                                    username=username if username else None,
+                                    password=password if password else None)
 
         except Exception as e:
             if ', AdalError: Unsupported wstrust endpoint version. ' \

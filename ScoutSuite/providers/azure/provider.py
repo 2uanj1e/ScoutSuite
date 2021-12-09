@@ -177,7 +177,11 @@ class AzureProvider(BaseProvider):
             if 'aad' in self.service_list and 'ms' in self.service_list:
                 for credential_user_registration_details in self.services['ms']['credential_user_registration_details']:
                     for user in self.services['aad']['users']:
-                        if self.services['aad']['users'][user]['name']  == self.services['ms']['credential_user_registration_details'][credential_user_registration_details]['userPrincipalName']:
-                            self.services['aad']['users'][user]['isMfaRegistered'] = self.services['ms']['credential_user_registration_details'][credential_user_registration_details]['isMfaRegistered']
+                        if self.services['aad']['users'][user]['name'] == \
+                                self.services['ms']['credential_user_registration_details'][
+                                    credential_user_registration_details]['userPrincipalName']:
+                            self.services['aad']['users'][user]['isMfaRegistered'] = \
+                            self.services['ms']['credential_user_registration_details'][
+                                credential_user_registration_details]['isMfaRegistered']
         except Exception as e:
             print_exception('Unable to match credential user registration details policies to AAD users: {}'.format(e))
