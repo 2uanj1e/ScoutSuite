@@ -11,5 +11,12 @@
   ],
   "dashboard_name": "Users",
   "path": "aad.users.id",
-  "conditions": []
+  "conditions": [
+      "and",
+      [
+          "aad.users.id.isMfaRegistered",
+          "false",
+          ""
+      ]
+  ]
 }

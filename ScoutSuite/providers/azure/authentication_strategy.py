@@ -16,7 +16,9 @@ from ScoutSuite.providers.base.authentication_strategy import AuthenticationStra
 
 
 AUTHORITY_HOST_URI = 'https://login.microsoftonline.com'
+# AUTHORITY_HOST_URI = 'https://login.microsoftonline.com/1498b82c-b2d9-4aa5-9ebe-98112b39123f/oauth2/token'
 AZURE_CLI_CLIENT_ID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
+# CUSTOM_CLI_CLIENT_ID = '3e25baed-f4f8-4c4c-8f5f-12d18e9f985c'
 
 
 class AzureCredentials:
@@ -142,6 +144,7 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                      client_id=None, client_secret=None,
                      username=None, password=None,
                      programmatic_execution=False,
+                     app_client_id=None,
                      **kargs):
         """
         Implements authentication for the Azure provider
@@ -184,6 +187,7 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
 
                 authority = AUTHORITY_HOST_URI + '/' + tenant_id
                 app = msal.PublicClientApplication(client_id=AZURE_CLI_CLIENT_ID, authority=authority)
+                owned_app = msal.PublicClientApplication(client_id=app_client_id, authority=authority)
 
                 # Resource Manager
                 resourceId = 'https://management.core.windows.net/'
@@ -219,13 +223,13 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
 
                 ## MS Graph
                 resourceId = 'https://graph.microsoft.com/'
-                scopes = [resourceId + '.default']
-                flow = app.initiate_device_flow(scopes=scopes)
+                scopes = [resourceId + 'Reports.Read.All', resourceId + 'Policy.Read.All']
+                flow = owned_app.initiate_device_flow(scopes=scopes)
                 if 'user_code' not in flow:
                     raise Exception("Failed to initiate device flow!")
                 else:
                     print_info(flow['message'])
-                    result = app.acquire_token_by_device_flow(flow)
+                    result = owned_app.acquire_token_by_device_flow(flow)
                     if "access_token" in result:
                         ms_graph_token = result
                     else:

@@ -74,6 +74,8 @@ class AzureProvider(BaseProvider):
         # Don't do this if we're running a local execution
         if not self.last_run:
             self._match_rbac_roles_and_principals()
+            self._match_conditional_access_policies_and_active_directory_users()
+            self._match_credential_user_registration_details_and_active_directory_users()
 
         super().preprocessing()
 
@@ -114,6 +116,7 @@ class AzureProvider(BaseProvider):
         except Exception as e:
             print_exception('Unable to match RBAC roles and principals: {}'.format(e))
 
+    def _match_conditional_access_policies_and_active_directory_users(self):
         """
         Match Microsoft Graph conditional access policies to AAD users
         TODO: The preprocess logic below should be migrated to conditions.py and browser.py
@@ -164,3 +167,17 @@ class AzureProvider(BaseProvider):
                                 self.services['ms']['conditional_access_policies'][policy]['id'])
         except Exception as e:
             print_exception('Unable to match conditional access policies to AAD users: {}'.format(e))
+
+    def _match_credential_user_registration_details_and_active_directory_users(self):
+        """
+        Match Credential user registration details policies to AAD users
+        TODO: The preprocess logic below should be migrated to conditions.py and browser.py
+        """
+        try:
+            if 'aad' in self.service_list and 'ms' in self.service_list:
+                for credential_user_registration_details in self.services['ms']['credential_user_registration_details']:
+                    for user in self.services['aad']['users']:
+                        if self.services['aad']['users'][user]['name']  == self.services['ms']['credential_user_registration_details'][credential_user_registration_details]['userPrincipalName']:
+                            self.services['aad']['users'][user]['isMfaRegistered'] = self.services['ms']['credential_user_registration_details'][credential_user_registration_details]['isMfaRegistered']
+        except Exception as e:
+            print_exception('Unable to match credential user registration details policies to AAD users: {}'.format(e))

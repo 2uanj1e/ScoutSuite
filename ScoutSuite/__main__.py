@@ -47,7 +47,9 @@ def run_from_cli():
                    client_id=args.get('client_id'), client_secret=args.get('client_secret'),
                    username=args.get('username'), password=args.get('password'),
                    tenant_id=args.get('tenant_id'),
-                   subscription_ids=args.get('subscription_ids'), all_subscriptions=args.get('all_subscriptions'),
+                   subscription_ids=args.get('subscription_ids'),
+                   all_subscriptions=args.get('all_subscriptions'),
+                   app_client_id=args.get('app_client_id'),
                    # GCP
                    project_id=args.get('project_id'), folder_id=args.get('folder_id'),
                    organization_id=args.get('organization_id'), all_projects=args.get('all_projects'),
@@ -93,7 +95,9 @@ def run(provider,
         client_id=None, client_secret=None,
         username=None, password=None,
         tenant_id=None,
-        subscription_ids=None, all_subscriptions=None,
+        subscription_ids=None,
+        all_subscriptions=None,
+        app_client_id=None,
         # GCP
         service_account=None,
         project_id=None, folder_id=None, organization_id=None, all_projects=False,
@@ -143,7 +147,7 @@ async def _run(provider,
                cli, user_account, user_account_browser,
                msi, service_principal, file_auth,
                tenant_id,
-               subscription_ids, all_subscriptions,
+               subscription_ids, all_subscriptions, app_client_id,
                client_id, client_secret,
                username, password,
                # GCP
@@ -199,7 +203,8 @@ async def _run(provider,
                                                  username=username,
                                                  password=password,
                                                  access_key_id=access_key_id,
-                                                 access_key_secret=access_key_secret)
+                                                 access_key_secret=access_key_secret,
+                                                 app_client_id=app_client_id)
 
         if not credentials:
             return 101

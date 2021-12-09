@@ -13,6 +13,12 @@
                 "level": "warning"
             }
         ],
+        "aad-owner-without-per-user-based-mfa.json": [
+            {
+                "enabled": true,
+                "level": "warning"
+            }
+        ],
         "appservice-authentication-disabled.json": [
             {
                 "enabled": true,

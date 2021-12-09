@@ -8,12 +8,12 @@ class CredentialUserRegistrationDetails(AzureResources):
 
     def _parse_credential_user_registration_detail(self, raw_credential_user_registration_detail):
         credential_user_registration_detail = {}
-        credential_user_registration_detail['id'] = credential_user_registration_detail['id']
-        credential_user_registration_detail['userPrincipalName'] = credential_user_registration_detail['userPrincipalName']
-        credential_user_registration_detail['userDisplayName'] = credential_user_registration_detail['userDisplayName']
-        credential_user_registration_detail['isRegistered'] = credential_user_registration_detail['isRegistered']
-        credential_user_registration_detail['isEnabled'] = credential_user_registration_detail['isEnabled']
-        credential_user_registration_detail['isCapable'] = credential_user_registration_detail['isCapable']
-        credential_user_registration_detail['isMfaRegistered'] = credential_user_registration_detail['isMfaRegistered']
-        credential_user_registration_detail['authMethods'] = credential_user_registration_detail['authMethods']
+        credential_user_registration_detail['id'] = raw_credential_user_registration_detail['id']
+        credential_user_registration_detail['userPrincipalName'] = raw_credential_user_registration_detail['userPrincipalName']
+        credential_user_registration_detail['userDisplayName'] = raw_credential_user_registration_detail['userDisplayName']
+        credential_user_registration_detail['isRegistered'] = raw_credential_user_registration_detail['isRegistered']
+        credential_user_registration_detail['isEnabled'] = raw_credential_user_registration_detail['isEnabled']
+        credential_user_registration_detail['isCapable'] = raw_credential_user_registration_detail['isCapable']
+        credential_user_registration_detail['isMfaRegistered'] = raw_credential_user_registration_detail['isMfaRegistered']
+        credential_user_registration_detail['authMethods'] = raw_credential_user_registration_detail['authMethods']
         return credential_user_registration_detail['id'], credential_user_registration_detail

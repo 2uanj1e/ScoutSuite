@@ -201,6 +201,10 @@ class ScoutSuiteArgumentParser:
                                  action='store',
                                  dest='tenant_id',
                                  help='ID of the Tenant (Directory) to scan')
+        azure_scope.add_argument('--app-client-id',
+                                 action='store',
+                                 dest='app_client_id',
+                                 help='Client ID of Azure app')
         azure_scope.add_argument('--subscriptions',
                                  action='store',
                                  default=[],
