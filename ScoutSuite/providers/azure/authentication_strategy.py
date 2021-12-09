@@ -26,7 +26,8 @@ class AzureCredentials:
     def __init__(self,
                  arm_credentials, aad_graph_credentials,ms_graph_token,
                  tenant_id=None, default_subscription_id=None,
-                 app=None):
+                 app=None,
+                 owned_app=None):
 
         self.arm_credentials = arm_credentials  # Azure Resource Manager API credentials
         self.aad_graph_credentials = aad_graph_credentials  # Azure AD Graph API credentials
@@ -34,6 +35,7 @@ class AzureCredentials:
         self.tenant_id = tenant_id
         self.default_subscription_id = default_subscription_id
         self.app = app
+        self.owned_app = owned_app
 
     def get_tenant_id(self):
         if self.tenant_id:
@@ -69,8 +71,8 @@ class AzureCredentials:
             raise AuthenticationException('Invalid token resource type')
     
     def get_fresh_token(self, token):
-        if self.app and hasattr(token, 'access_token'):
-            accounts = self.app.get_accounts()
+        if self.owned_app and hasattr(token, 'access_token'):
+            accounts = self.owned_app.get_accounts()
             if accounts:
                 expiration_datetime = datetime.fromtimestamp(token['id_token_claims']['exp'])
                 current_datetime = datetime.now()
@@ -83,13 +85,13 @@ class AzureCredentials:
     def refresh_token(self, token):
         print_info('No suitable token exists in cache. Let\'s get a new one.')
         resourceId = 'https://graph.microsoft.com/' if 'https://graph.microsoft.com/' in token['scope'] else None
-        scopes = [resourceId + '.default']
-        flow = self.app.initiate_device_flow(scopes=scopes)
+        scopes = [resourceId + 'Reports.Read.All', resourceId + 'Policy.Read.All']
+        flow = self.owned_app.initiate_device_flow(scopes=scopes)
         if 'user_code' not in flow:
             raise Exception("Failed to initiate device flow!")
         else:
             print_info(flow['message'])
-            result = self.app.acquire_token_by_device_flow(flow)
+            result = self.owned_app.acquire_token_by_device_flow(flow)
             if "access_token" in result:
                 token = result
             else:
@@ -302,7 +304,8 @@ class AzureAuthenticationStrategy(AuthenticationStrategy):
                                     aad_graph_credentials,
                                     ms_graph_token,
                                     tenant_id, subscription_id,
-                                    app)
+                                    app,
+                                    owned_app)
 
         except Exception as e:
             if ', AdalError: Unsupported wstrust endpoint version. ' \
